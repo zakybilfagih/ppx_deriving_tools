@@ -1,5 +1,7 @@
 (lang dune 3.10)
 
+(name ppx_deriving_tools)
+
 (generate_opam_files true)
 
 (source
