@@ -23,7 +23,7 @@ module Repr : sig
     | Te_polyvariant of polyvariant_case list
 
   and variant_case =
-    | Vc_tuple of label loc * type_expr list * label loc option
+    | Vc_tuple of label loc * type_expr list * attributes
     | Vc_record of label loc * (label loc * type_expr) list
 
   and polyvariant_case =
