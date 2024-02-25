@@ -74,6 +74,27 @@ module Repr = struct
     | Ptyp_extension _ -> not_supported ~loc "extension nodes"
     | Ptyp_alias _ -> not_supported ~loc "type aliases"
 
+  let get_attribute_by_name attributes name =
+    let filtered =
+      attributes
+      |> List.filter ~f:(fun { attr_name = { txt; _ }; _ } ->
+             String.equal txt name)
+    in
+    match filtered with [ attr ] -> Some attr | _ -> None
+
+  let get_expr_from_payload { attr_payload = payload; _ } =
+    match payload with
+    | PStr ({ pstr_desc; _ } :: []) -> (
+        match pstr_desc with
+        | Pstr_eval (expr, _) -> Some expr
+        | _ -> None)
+    | _ -> None
+
+  let get_const_string_from_expr expr =
+    match expr.pexp_desc with
+    | Pexp_constant (Pconst_string (as_name, _, _)) -> Some as_name
+    | _ -> None
+
   let of_type_declaration (td : Parsetree.type_declaration) : type_decl =
     let loc = td.ptype_loc in
     let shape =
@@ -85,7 +106,15 @@ module Repr = struct
             List.map ctors ~f:(fun ctor ->
                 match ctor.pcd_args with
                 | Pcstr_tuple ts ->
-                    Vc_tuple (ctor.pcd_name, List.map ts ~f:of_core_type)
+                    let name =
+                      get_attribute_by_name ctor.pcd_attributes "as"
+                      |> Option.flat_map get_expr_from_payload
+                      |> Option.flat_map get_const_string_from_expr
+                      |> Option.get_or ~default:ctor.pcd_name.txt
+                    in
+                    Vc_tuple
+                      ( { txt = name; loc = Location.none },
+                        List.map ts ~f:of_core_type )
                 | Pcstr_record fs ->
                     let fs =
                       List.map fs ~f:(fun f ->
