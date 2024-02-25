@@ -23,11 +23,11 @@ module Repr : sig
     | Te_polyvariant of polyvariant_case list
 
   and variant_case =
-    | Vc_tuple of label loc * type_expr list * attributes
-    | Vc_record of label loc * (label loc * type_expr) list
+    | Vc_tuple of label loc * attributes * type_expr list
+    | Vc_record of label loc * attributes * (label loc * type_expr) list
 
   and polyvariant_case =
-    | Pvc_construct of label loc * type_expr list
+    | Pvc_construct of label loc * attributes * type_expr list
     | Pvc_inherit of Longident.t loc * type_expr list
 
   val of_core_type : core_type -> type_expr
@@ -57,6 +57,7 @@ val deriving_to :
     expression) ->
   derive_of_variant_case:
     (loc:location ->
+    attrs:attributes ->
     derive_of_type_expr ->
     label loc ->
     Repr.type_expr list ->
@@ -64,6 +65,7 @@ val deriving_to :
     expression) ->
   derive_of_variant_case_record:
     (loc:location ->
+    attrs:attributes ->
     derive_of_type_expr ->
     label loc ->
     (label loc * Repr.type_expr) list ->
@@ -97,6 +99,7 @@ val deriving_of :
     expression) ->
   derive_of_variant_case:
     (loc:location ->
+    attrs:attributes ->
     derive_of_type_expr ->
     (expression option -> expression) ->
     label loc ->
@@ -105,6 +108,7 @@ val deriving_of :
     expression) ->
   derive_of_variant_case_record:
     (loc:location ->
+    attrs:attributes ->
     derive_of_type_expr ->
     (expression option -> expression) ->
     label loc ->
@@ -133,6 +137,7 @@ val deriving_of_match :
     expression) ->
   derive_of_variant_case:
     (loc:location ->
+    attrs:attributes ->
     derive_of_type_expr ->
     (expression option -> expression) ->
     label loc ->
@@ -140,6 +145,7 @@ val deriving_of_match :
     case) ->
   derive_of_variant_case_record:
     (loc:location ->
+    attrs:attributes ->
     derive_of_type_expr ->
     (expression option -> expression) ->
     label loc ->
