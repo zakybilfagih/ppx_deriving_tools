@@ -24,7 +24,7 @@ module Repr = struct
   }
 
   and type_decl_shape =
-    | Ts_record of (label loc * attributes * type_expr) list
+    | Ts_record of (label loc * type_expr) list
     | Ts_variant of variant_case list
     | Ts_expr of type_expr
 
@@ -38,8 +38,7 @@ module Repr = struct
 
   and variant_case =
     | Vc_tuple of label loc * attributes * type_expr list
-    | Vc_record of
-        label loc * attributes * (label loc * attributes * type_expr) list
+    | Vc_record of label loc * attributes * (label loc * type_expr) list
 
   and polyvariant_case =
     | Pvc_construct of label loc * attributes * type_expr list
@@ -94,17 +93,14 @@ module Repr = struct
                 | Pcstr_record fs ->
                     let fs =
                       List.map fs ~f:(fun f ->
-                          ( f.pld_name,
-                            f.pld_attributes,
-                            of_core_type f.pld_type ))
+                          f.pld_name, of_core_type f.pld_type)
                     in
                     Vc_record (ctor.pcd_name, ctor.pcd_attributes, fs))
           in
           Ts_variant cs
       | Ptype_record fs, _ ->
           let fs =
-            List.map fs ~f:(fun f ->
-                f.pld_name, f.pld_attributes, of_core_type f.pld_type)
+            List.map fs ~f:(fun f -> f.pld_name, of_core_type f.pld_type)
           in
           Ts_record fs
       | Ptype_open, _ -> not_supported ~loc "open types"
@@ -147,7 +143,7 @@ module Deriving_helper = struct
   let gen_record ~loc prefix fs =
     let ps, es =
       List.split
-        (List.map fs ~f:(fun (n, _attrs, _t) ->
+        (List.map fs ~f:(fun (n, _t) ->
              let id = sprintf "%s_%s" prefix n.txt in
              let patt = ppat_var ~loc { loc = n.loc; txt = id } in
              let expr =
@@ -173,7 +169,7 @@ module Deriving_helper = struct
 
   let gen_pat_record ~loc prefix fs =
     let xs =
-      List.map fs ~f:(fun (n, _attrs, _t) ->
+      List.map fs ~f:(fun (n, _t) ->
           let id = sprintf "%s_%s" prefix n.txt in
           let patt = ppat_var ~loc { loc = n.loc; txt = id } in
           let expr = pexp_ident ~loc { loc = n.loc; txt = lident id } in
@@ -226,7 +222,7 @@ class virtual deriving0 =
       not_supported "tuple types"
 
     method derive_of_record
-        : loc:location -> (label loc * attributes * type_expr) list -> expression =
+        : loc:location -> (label loc * type_expr) list -> expression =
       not_supported "record types"
 
     method derive_of_variant
@@ -319,7 +315,7 @@ class virtual deriving1 =
 
     method derive_of_record
         : loc:location ->
-          (label loc * attributes * type_expr) list ->
+          (label loc * type_expr) list ->
           expression ->
           expression =
       not_supported "record types"
@@ -422,9 +418,7 @@ class virtual deriving_type =
       not_supported "tuple types"
 
     method derive_of_record
-        : loc:location ->
-          (label loc * attributes * Repr.type_expr) list ->
-          core_type =
+        : loc:location -> (label loc * Repr.type_expr) list -> core_type =
       not_supported "record types"
 
     method derive_of_variant
