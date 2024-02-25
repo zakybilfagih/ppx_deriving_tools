@@ -37,7 +37,7 @@ module Repr = struct
   and type_expr = core_type * type_expr'
 
   and variant_case =
-    | Vc_tuple of label loc * type_expr list
+    | Vc_tuple of label loc * type_expr list * label loc option
     | Vc_record of label loc * (label loc * type_expr) list
 
   and polyvariant_case =
@@ -92,7 +92,7 @@ module Repr = struct
 
   let get_const_string_from_expr expr =
     match expr.pexp_desc with
-    | Pexp_constant (Pconst_string (as_name, _, _)) -> Some as_name
+    | Pexp_constant (Pconst_string (txt, loc, _)) -> Some { txt; loc }
     | _ -> None
 
   let of_type_declaration (td : Parsetree.type_declaration) : type_decl =
@@ -106,15 +106,13 @@ module Repr = struct
             List.map ctors ~f:(fun ctor ->
                 match ctor.pcd_args with
                 | Pcstr_tuple ts ->
-                    let name =
+                    let name_as =
                       get_attribute_by_name ctor.pcd_attributes "as"
                       |> Option.flat_map get_expr_from_payload
                       |> Option.flat_map get_const_string_from_expr
-                      |> Option.get_or ~default:ctor.pcd_name.txt
                     in
                     Vc_tuple
-                      ( { txt = name; loc = Location.none },
-                        List.map ts ~f:of_core_type )
+                      (ctor.pcd_name, List.map ts ~f:of_core_type, name_as)
                 | Pcstr_record fs ->
                     let fs =
                       List.map fs ~f:(fun f ->
@@ -572,9 +570,11 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
                | Vc_record (n, fs) ->
                    derive_of_variant_case_record ~loc
                      self#derive_of_type_expr (make n) n fs next
-               | Vc_tuple (n, ts) ->
+               | Vc_tuple (n, ts, n_as) ->
                    derive_of_variant_case ~loc self#derive_of_type_expr
-                     (make n) n ts next)
+                     (make n)
+                     (Option.get_or ~default:n n_as)
+                     ts next)
          in
          derive_of_variant ~loc self#derive_of_type_expr cases x
 
@@ -712,9 +712,11 @@ let deriving_of_match ~name ~of_t ~error ~derive_of_tuple
                    derive_of_variant_case_record ~loc
                      self#derive_of_type_expr (make n) n fs
                    :: next
-               | Vc_tuple (n, ts) ->
+               | Vc_tuple (n, ts, n_as) ->
                    derive_of_variant_case ~loc self#derive_of_type_expr
-                     (make n) n ts
+                     (make n)
+                     (Option.get_or ~default:n n_as)
+                     ts
                    :: next)
          in
          pexp_match ~loc x cases
@@ -818,12 +820,13 @@ let deriving_to ~name ~t_to ~derive_of_tuple ~derive_of_record
                  ctor_pat n (Some p)
                  --> derive_of_variant_case_record ~loc
                        self#derive_of_type_expr n fs es
-             | Vc_tuple (n, ts) ->
+             | Vc_tuple (n, ts, n_as) ->
                  let arity = List.length ts in
                  let p, es = gen_pat_tuple ~loc "x" arity in
                  ctor_pat n (if arity = 0 then None else Some p)
                  --> derive_of_variant_case ~loc self#derive_of_type_expr
-                       n ts es))
+                       (Option.get_or ~default:n n_as)
+                       ts es))
 
        method! derive_of_polyvariant ~loc cs _t x =
          let cases =
