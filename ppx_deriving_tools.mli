@@ -64,6 +64,14 @@ val deriving_to :
     Repr.type_expr list ->
     expression list ->
     expression) ->
+  derive_of_enum_variant_case:
+    (loc:location ->
+    attrs:attributes ->
+    derive_of_type_expr ->
+    label loc ->
+    Repr.type_expr list ->
+    expression list ->
+    expression) ->
   derive_of_variant_case_record:
     (loc:location ->
     attrs:attributes ->
@@ -107,6 +115,15 @@ val deriving_of :
     Repr.type_expr list ->
     expression ->
     expression) ->
+  derive_of_enum_variant_case:
+    (loc:location ->
+    attrs:attributes ->
+    derive_of_type_expr ->
+    (expression option -> expression) ->
+    label loc ->
+    Repr.type_expr list ->
+    expression ->
+    expression) ->
   derive_of_variant_case_record:
     (loc:location ->
     attrs:attributes ->
@@ -137,6 +154,14 @@ val deriving_of_match :
     expression ->
     expression) ->
   derive_of_variant_case:
+    (loc:location ->
+    attrs:attributes ->
+    derive_of_type_expr ->
+    (expression option -> expression) ->
+    label loc ->
+    Repr.type_expr list ->
+    case) ->
+  derive_of_enum_variant_case:
     (loc:location ->
     attrs:attributes ->
     derive_of_type_expr ->
