@@ -106,6 +106,12 @@ val deriving_of :
     expression ->
     expression ->
     expression) ->
+  derive_of_enum_variant:
+    (loc:location ->
+    derive_of_type_expr ->
+    expression ->
+    expression ->
+    expression) ->
   derive_of_variant_case:
     (loc:location ->
     attrs:attributes ->

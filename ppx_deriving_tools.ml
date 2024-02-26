@@ -507,7 +507,7 @@ type derive_of_type_expr =
   loc:location -> Repr.type_expr -> expression -> expression
 
 let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
-    ~derive_of_variant ~derive_of_variant_case
+    ~derive_of_variant ~derive_of_enum_variant ~derive_of_variant_case
     ~derive_of_enum_variant_case ~derive_of_variant_case_record () =
   let poly_name = sprintf "%s_poly" name in
   let poly =
@@ -543,7 +543,11 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
                     | Some x -> (Some x :> [%t t] option)
                     | None -> [%e next]])
         in
-        derive_of_variant ~loc self#derive_of_type_expr cases x
+        let is_enum = is_polyvar_enum cs in
+        let derive_fun =
+          if is_enum then derive_of_enum_variant else derive_of_variant
+        in
+        derive_fun ~loc self#derive_of_type_expr cases x
     end
   in
   Deriving1
@@ -578,7 +582,10 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
                    derive_fun ~loc ~attrs self#derive_of_type_expr
                      (make n) n ts next)
          in
-         derive_of_variant ~loc self#derive_of_type_expr cases x
+         let derive_fun =
+           if is_enum then derive_of_enum_variant else derive_of_variant
+         in
+         derive_fun ~loc self#derive_of_type_expr cases x
 
        method! derive_of_polyvariant ~loc cs t x =
          let is_enum = is_polyvar_enum cs in
@@ -603,7 +610,10 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
                      | Some e -> (e :> [%t t])
                      | None -> [%e next]])
          in
-         derive_of_variant ~loc self#derive_of_type_expr cases x
+         let derive_fun =
+           if is_enum then derive_of_enum_variant else derive_of_variant
+         in
+         derive_fun ~loc self#derive_of_type_expr cases x
 
        method! derive_type_decl decl =
          match decl.shape with
