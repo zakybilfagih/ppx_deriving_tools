@@ -691,14 +691,18 @@ let deriving_of_match ~name ~of_t ~error ~derive_of_tuple
                     | Some x -> (Some x :> [%t t] option)
                     | None -> [%e next]])
         in
+        let is_enum = is_polyvar_enum cs in
         let cases =
           List.fold_left (List.rev ctors) ~init:[ catch_all ]
             ~f:(fun next ((n : label loc), attrs, ts) ->
               let make arg =
                 [%expr Some [%e pexp_variant ~loc:n.loc n.txt arg]]
               in
-              derive_of_variant_case ~loc ~attrs self#derive_of_type_expr
-                make n ts
+              let derive_fun =
+                if is_enum then derive_of_enum_variant_case
+                else derive_of_variant_case
+              in
+              derive_fun ~loc ~attrs self#derive_of_type_expr make n ts
               :: next)
         in
         pexp_match ~loc x cases
