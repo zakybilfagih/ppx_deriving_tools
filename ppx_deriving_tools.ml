@@ -526,15 +526,20 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
       method! derive_of_variant ~loc:_ _ _ = assert false
 
       method! derive_of_polyvariant ~loc cs t x =
+        let is_enum = is_polyvar_enum cs in
         let cases =
           List.fold_left (List.rev cs) ~init:[%expr None]
             ~f:(fun next c ->
               match c with
               | Pvc_construct (n, attrs, ts) ->
+                  let derive_fun =
+                    if is_enum then derive_of_enum_variant_case
+                    else derive_of_variant_case
+                  in
                   let make arg =
                     [%expr Some [%e pexp_variant ~loc:n.loc n.txt arg]]
                   in
-                  derive_of_variant_case ~loc ~attrs
+                  derive_fun ~loc ~attrs
                     self#derive_of_type_expr make n ts next
               | Pvc_inherit (n, ts) ->
                   let x = self#derive_type_ref ~loc poly_name n ts x in
@@ -543,7 +548,6 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
                     | Some x -> (Some x :> [%t t] option)
                     | None -> [%e next]])
         in
-        let is_enum = is_polyvar_enum cs in
         let derive_fun =
           if is_enum then derive_of_enum_variant else derive_of_variant
         in
