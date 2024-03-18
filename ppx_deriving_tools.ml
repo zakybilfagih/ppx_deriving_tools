@@ -21,6 +21,7 @@ module Repr = struct
     params : label loc list;
     shape : type_decl_shape;
     loc : location;
+    attrs : attributes;
   }
 
   and type_decl_shape =
@@ -115,7 +116,13 @@ module Repr = struct
           | Ptyp_var name -> { txt = name; loc = t.ptyp_loc }
           | _ -> failwith "type variable is not a variable")
     in
-    { name = td.ptype_name; shape; params; loc = td.ptype_loc }
+    {
+      name = td.ptype_name;
+      shape;
+      params;
+      loc = td.ptype_loc;
+      attrs = td.ptype_attributes;
+    }
 
   let te_opaque (n : Longident.t loc) ts =
     ptyp_constr ~loc:n.loc n (List.map ts ~f:fst), Te_opaque (n, ts)
@@ -127,6 +134,20 @@ module Repr = struct
     ptyp_constr ~loc
       { loc; txt = lident decl.name.txt }
       (List.map decl.params ~f:(fun { loc; txt } -> ptyp_var ~loc txt))
+
+  let is_variant_enum cs =
+    List.for_all
+      ~f:(function
+        | Vc_tuple (_, _, ts) -> List.length ts = 0
+        | Vc_record (_, _, fs) -> List.length fs = 0)
+      cs
+
+  let is_polyvar_enum cs =
+    List.for_all
+      ~f:(function
+        | Pvc_construct (_, _, ts) -> List.length ts = 0
+        | Pvc_inherit (_, ts) -> List.length ts = 0)
+      cs
 end
 
 module Deriving_helper = struct
@@ -282,7 +303,8 @@ class virtual deriving0 =
     method derive_type_decl_label name =
       map_loc (derive_of_label self#name) name
 
-    method derive_type_decl ({ name; params; shape; loc } as decl) =
+    method derive_type_decl
+        ({ name; params; shape; loc; attrs = _ } as decl) =
       let expr = self#derive_type_shape ~loc shape in
       let t = Repr.decl_to_te_expr decl in
       let expr = [%expr ([%e expr] : [%t self#t ~loc name t])] in
@@ -387,7 +409,8 @@ class virtual deriving1 =
     method derive_type_decl_label name =
       map_loc (derive_of_label self#name) name
 
-    method derive_type_decl ({ name; params; shape; loc } as decl) =
+    method derive_type_decl
+        ({ name; params; shape; loc; attrs = _ } as decl) =
       let expr = self#derive_type_shape ~loc [%expr x] shape in
       let t = Repr.decl_to_te_expr decl in
       let expr = [%expr (fun x -> [%e expr] : [%t self#t ~loc name t])] in
@@ -471,7 +494,7 @@ class virtual deriving_type =
       | Ts_record fs -> self#derive_of_record ~loc fs
       | Ts_variant cs -> self#derive_of_variant ~loc cs
 
-    method derive_type_decl { Repr.name; params; shape; loc }
+    method derive_type_decl { Repr.name; params; shape; loc; attrs = _ }
         : type_declaration list =
       let manifest = self#derive_type_shape ~loc shape in
       if not (List.is_empty params) then not_supported ~loc "type params"
@@ -539,8 +562,8 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
                   let make arg =
                     [%expr Some [%e pexp_variant ~loc:n.loc n.txt arg]]
                   in
-                  derive_fun ~loc ~attrs
-                    self#derive_of_type_expr make n ts next
+                  derive_fun ~loc ~attrs self#derive_of_type_expr make n
+                    ts next
               | Pvc_inherit (n, ts) ->
                   let x = self#derive_type_ref ~loc poly_name n ts x in
                   [%expr
@@ -623,7 +646,10 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
          match decl.shape with
          | Ts_expr (t, Te_polyvariant _) ->
              let str =
-               let { name = decl_name; params; shape = _; loc } = decl in
+               let { name = decl_name; params; shape = _; loc; attrs = _ }
+                   =
+                 decl
+               in
                let expr =
                  let x = [%expr x] in
                  let init =
@@ -785,7 +811,10 @@ let deriving_of_match ~name ~of_t ~error ~derive_of_tuple
          match decl.shape with
          | Ts_expr (_t, Te_polyvariant _) ->
              let str =
-               let { name = decl_name; params; shape = _; loc } = decl in
+               let { name = decl_name; params; shape = _; loc; attrs = _ }
+                   =
+                 decl
+               in
                let expr =
                  let x = [%expr x] in
                  let init =
