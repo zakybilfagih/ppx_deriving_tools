@@ -220,20 +220,6 @@ module Deriving_helper = struct
 
   let ederiver name (lid : Longident.t loc) =
     pexp_ident ~loc:lid.loc (map_loc (derive_of_longident name) lid)
-
-  let is_variant_enum cs =
-    List.for_all
-      ~f:(function
-        | Repr.Vc_tuple (_, _, ts) -> List.length ts = 0
-        | Repr.Vc_record (_, _, fs) -> List.length fs = 0)
-      cs
-
-  let is_polyvar_enum cs =
-    List.for_all
-      ~f:(function
-        | Repr.Pvc_construct (_, _, ts) -> List.length ts = 0
-        | Repr.Pvc_inherit (_, ts) -> List.length ts = 0)
-      cs
 end
 
 type deriver =
@@ -530,8 +516,10 @@ type derive_of_type_expr =
   loc:location -> Repr.type_expr -> expression -> expression
 
 let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
-    ~derive_of_variant ~derive_of_enum_variant ~derive_of_variant_case
-    ~derive_of_enum_variant_case ~derive_of_variant_case_record () =
+    ~derive_of_variant ?(derive_of_enum_variant = derive_of_variant)
+    ~derive_of_variant_case
+    ?(derive_of_enum_variant_case = derive_of_variant_case)
+    ~derive_of_variant_case_record () =
   let poly_name = sprintf "%s_poly" name in
   let poly =
     object (self)
@@ -685,7 +673,8 @@ let deriving_of ~name ~of_t ~error ~derive_of_tuple ~derive_of_record
     end)
 
 let deriving_of_match ~name ~of_t ~error ~derive_of_tuple
-    ~derive_of_record ~derive_of_variant_case ~derive_of_enum_variant_case
+    ~derive_of_record ~derive_of_variant_case
+    ?(derive_of_enum_variant_case = derive_of_variant_case)
     ~derive_of_variant_case_record () =
   let poly_name = sprintf "%s_poly" name in
   let poly =
@@ -852,7 +841,8 @@ let deriving_of_match ~name ~of_t ~error ~derive_of_tuple
     end)
 
 let deriving_to ~name ~t_to ~derive_of_tuple ~derive_of_record
-    ~derive_of_variant_case ~derive_of_enum_variant_case
+    ~derive_of_variant_case
+    ?(derive_of_enum_variant_case = derive_of_variant_case)
     ~derive_of_variant_case_record () =
   Deriving1
     (object (self)
